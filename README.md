@@ -11,7 +11,7 @@ Screenshot
 
 Below is a screenshot of the app. The real screenshot is included in `assets/`.
 
-![App screenshot](<assets/Screenshot 2025-10-14 225345.png>)
+![App screenshot](assets/screenshot.png)
 
 Quick start
 1. Open `index.html` in your browser (double-click or use `File → Open`).
