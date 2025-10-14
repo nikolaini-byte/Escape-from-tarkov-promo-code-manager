@@ -80,4 +80,10 @@ Place `demo.gif` in `assets/` and reference it in this README with:
 ![Demo GIF](assets/demo.gif)
 ```
 
+Demo
+----
+Here's a short demo showing bulk extract → queue → copy next (autoplaying inline where supported):
+
+![Demo GIF](assets/demo.gif)
+
 That's it — the README now shows a screenshot placeholder and step-by-step instructions to create a demo GIF for the project.
