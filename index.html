@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tarkov Promo Code Manager — Local (Modal Editor)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
+  <style>
+    /* EFT-inspired theme: dark military palette, orange accents, rugged typography */
+    @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap');
+    :root{font-family:'Titillium Web', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+    body{margin:18px;background:#061018;color:#dceef2;background-image:linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.6));}
+    h1{font-size:20px;margin:0 0 10px;color:#ffcfa0;text-shadow:0 2px 0 rgba(0,0,0,0.6)}
+    .card{background:linear-gradient(180deg,#071217 0%, #061018 100%);border:1px solid rgba(255,159,45,0.06);padding:14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,0.7);border-left:4px solid rgba(255,159,45,0.14)}
+    table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:6px;overflow:hidden}
+    th,td{padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left;font-size:13px}
+    th{opacity:0.95;font-weight:700;background:linear-gradient(180deg, rgba(0,0,0,0.18), rgba(255,159,45,0.02));color:#ffd59a}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center}
+    button{background:#0f2224;color:#fff2da;border:1px solid rgba(255,159,45,0.06);padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:700;letter-spacing:0.4px}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#d6eef4}
+    button:hover{transform:translateY(-1px)}
+    button:active{transform:translateY(0)}
+    .btn-accent{background:#ff9f2d;color:#071018;border:1px solid rgba(0,0,0,0.25)}
+    .status{padding:5px 10px;border-radius:999px;font-size:12px;display:inline-block;font-weight:700}
+    .unknown{background:#2b3340;color:#d1d7de}
+    .active{background:#274034;color:#dfffe0}
+    .expired{background:#4a2424;color:#ffd6d6}
+    .verified{background:#28425a;color:#dcefff}
+    input[type=text], textarea, select{width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));color:inherit}
+    .small{font-size:12px;opacity:0.85}
+    .right{display:flex;gap:6px;align-items:center}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace}
+    a{color:inherit;text-decoration:underline}
+    .row-actions button{margin-right:6px}
+    .import-area{margin-top:8px}
+    footer{margin-top:12px;font-size:12px;opacity:0.7}
+    .hint{font-size:13px;margin-top:8px}
+    .queue-info{margin-top:8px;display:flex;gap:8px;align-items:center}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.7);display:flex;align-items:center;justify-content:center;z-index:60}
+    .modal{background:#081421;padding:16px;border-radius:10px;width:min(720px,95%);box-shadow:0 14px 50px rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.04)}
+    .modal h2{margin:0 0 8px;font-size:18px;color:#ffd59a}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-row{margin-bottom:8px}
+    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .error{color:#ff8b8b;font-size:13px;margin-top:6px}
+
+    @media (max-width:640px){ .form-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <h1>Tarkov Promo Code Manager — Local (Modal Editor)</h1>
+  <div class="card">
+  <div class="small">Note: This tool is local-only. It <strong>does not</strong> interact with Tarkov/Battlestate servers or the launcher. Clipboard features exist — your browser may show permission prompts.</div>
+
+    <div class="controls">
+  <button id="addBtn">Add New Code</button>
+      <button id="exportJson">Export (JSON)</button>
+      <button id="exportCsv" class="ghost">Export (CSV)</button>
+  <button id="copyActive">Copy All Active</button>
+  <button id="importBtn" class="ghost">Import (JSON)</button>
+  <input id="search" type="text" placeholder="Search... (Code, Note, Source)" />
+    </div>
+
+    <div style="margin-top:10px">
+  <label class="small">Bulk scan (paste page content / tweets / forum text) — the tool extracts possible codes via regex:</label>
+  <textarea id="bulkText" rows="6" placeholder="Paste copied text here (e.g. tweet text, forum post, stream chat log)..."></textarea>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+  <button id="extractBtn">Extract Codes</button>
+  <button id="clearBulk" class="ghost">Clear</button>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <label class="small">Regex:</label>
+          <input id="regexInput" type="text" value="[A-Z0-9\\-]{5,30}" style="width:260px" />
+        </div>
+      </div>
+  <div class="hint">Tip: Copy the text of a tweet, Reddit post, or stream chat and click <strong>Extract Codes</strong>. The tool detects potential codes (uppercase letters/numbers) and adds them to the list.</div>
+    </div>
+
+    <table id="codesTable" aria-live="polite">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description / Note</th>
+          <th>Source</th>
+          <th>Captured</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="queue-info">
+  <div class="small">Queue controls:</div>
+      <button id="copyNext">Copy Next</button>
+  <button id="markUsed" class="ghost">Mark as used</button>
+  <label class="small" style="margin-left:8px">Shortcut: Press <strong>N</strong> to trigger <em>Copy Next</em>.</label>
+      <div style="margin-left:auto" class="small">Auto-clear clipboard: <input type="checkbox" id="autoClear" /></div>
+    </div>
+
+    <div class="import-area" id="importArea" style="display:none;margin-top:8px">
+  <textarea id="importText" rows="6" placeholder='Paste JSON here or drop a file'></textarea>
+      <div style="display:flex;gap:8px;margin-top:6px">
+  <button id="importApply">Apply Import</button>
+  <button id="importCancel" class="ghost">Cancel</button>
+      </div>
+    </div>
+
+  <footer>Features: Modal editor, regex configuration, bulk text scan & queue with Copy-Next + shortcut. Data is stored under LocalStorage key <code>tarkov_promo_codes_v2</code>.</footer>
+  </div>
+
+  <!-- Editor Modal -->
+  <div id="editorModal" style="display:none">
+    <div class="modal-backdrop" id="editorBackdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+  <h2 id="editorTitle">New Code</h2>
+  <div id="editorError" class="error" style="display:none"></div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Code (required)</label>
+            <input id="editorCode" type="text" placeholder="e.g. PROMO-2025" />
+          </div>
+          <div class="form-row">
+            <label>Date (YYYY-MM-DD)</label>
+            <input id="editorSeen" type="text" placeholder="YYYY-MM-DD" />
+          </div>
+          <div class="form-row">
+            <label>Note</label>
+            <input id="editorNote" type="text" />
+          </div>
+          <div class="form-row">
+            <label>Source</label>
+            <input id="editorSource" type="text" />
+          </div>
+          <div class="form-row">
+            <label>Status</label>
+            <select id="editorStatus">
+              <option value="unknown">unknown</option>
+              <option value="active">active</option>
+              <option value="expired">expired</option>
+              <option value="verified">verified</option>
+              <option value="used">used</option>
+            </select>
+          </div>
+          <div class="form-row" style="align-self:center;display:flex;gap:8px;align-items:center">
+            <label style="margin:0">In Queue</label>
+            <input id="editorQueued" type="checkbox" />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="editorCancel">Cancel</button>
+          <button id="editorSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Storage key
+    const KEY = 'tarkov_promo_codes_v2';
+    const REGEX_KEY = 'tarkov_promo_codes_regex';
+
+    // Load / Save
+    function load(){ try{ const raw = localStorage.getItem(KEY); if(!raw) return []; return JSON.parse(raw); }catch(e){console.error(e); return []; } }
+    function save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+    function loadRegex(){ return localStorage.getItem(REGEX_KEY) || '[A-Z0-9\\-]{5,30}'; }
+    function saveRegex(v){ localStorage.setItem(REGEX_KEY, v); }
+
+    let codes = load();
+
+    // DOM refs
+    const tbody = document.querySelector('#codesTable tbody');
+    const searchInput = document.querySelector('#search');
+
+    // Editor modal elements
+    const editorModal = document.getElementById('editorModal');
+    const editorBackdrop = document.getElementById('editorBackdrop');
+    const editorTitle = document.getElementById('editorTitle');
+    const editorError = document.getElementById('editorError');
+    const editorCode = document.getElementById('editorCode');
+    const editorNote = document.getElementById('editorNote');
+    const editorSource = document.getElementById('editorSource');
+    const editorSeen = document.getElementById('editorSeen');
+    const editorStatus = document.getElementById('editorStatus');
+    const editorQueued = document.getElementById('editorQueued');
+    const editorSave = document.getElementById('editorSave');
+    const editorCancel = document.getElementById('editorCancel');
+
+    // Regex input
+    const regexInput = document.getElementById('regexInput');
+    regexInput.value = loadRegex();
+
+    function render(filter=''){
+      tbody.innerHTML='';
+      const f = filter.trim().toLowerCase();
+      codes.forEach((c, idx)=>{
+        const hay = (c.code+' '+(c.note||'')+' '+(c.source||'')).toLowerCase();
+        if(f && !hay.includes(f)) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `\n          <td class="mono">${escapeHtml(c.code)}</td>\n          <td>${escapeHtml(c.note||'')}</td>\n          <td>${c.source? `<a href="#" data-idx="${idx}" class="openSource">${escapeHtml(c.source)}</a>`:''}</td>\n          <td class="small">${c.seen||''}</td>\n          <td><span class="status ${statusClass(c.status)}">${(c.status||'unknown').toUpperCase()}</span></td>\n          <td class="row-actions right">\n            <button data-idx="${idx}" class="copy">Copy</button>\n            <button data-idx="${idx}" class="queue">Queue</button>\n            <button data-idx="${idx}" class="setActive">Active</button>\n            <button data-idx="${idx}" class="setExpired ghost">Expired</button>\n            <button data-idx="${idx}" class="setVerified">Verified</button>\n            <button data-idx="${idx}" class="edit ghost">Edit</button>\n            <button data-idx="${idx}" class="del ghost">Del</button>\n          </td>`;
+  tbody.appendChild(tr);
+      });
+    }
+
+    function statusClass(s){ if(!s) return 'unknown'; return s==='active' ? 'active' : s==='expired' ? 'expired' : s==='verified' ? 'verified' : s==='unknown' ? 'unknown' : 'unknown'; }
+    function escapeHtml(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function wire(){
+      document.getElementById('addBtn').addEventListener('click', ()=> showEditorModal(null, null));
+      document.getElementById('exportJson').addEventListener('click', ()=> downloadJson());
+      document.getElementById('exportCsv').addEventListener('click', ()=> downloadCsv());
+      document.getElementById('copyActive').addEventListener('click', copyActiveToClipboard);
+      document.getElementById('importBtn').addEventListener('click', ()=> toggleImport(true));
+      document.getElementById('importCancel').addEventListener('click', ()=> toggleImport(false));
+      document.getElementById('importApply').addEventListener('click', applyImport);
+      searchInput.addEventListener('input', ()=> render(searchInput.value));
+
+      document.getElementById('extractBtn').addEventListener('click', extractFromBulk);
+      document.getElementById('clearBulk').addEventListener('click', ()=> document.getElementById('bulkText').value='');
+      document.getElementById('copyNext').addEventListener('click', copyNextFromQueue);
+      document.getElementById('markUsed').addEventListener('click', markCurrentAsUsed);
+
+      tbody.addEventListener('click', (e)=>{
+        const t = e.target;
+        const idx = t.dataset.idx ? Number(t.dataset.idx) : null;
+    if(t.classList.contains('copy')){ attemptClipboardWrite(codes[idx].code).then(()=> flash(t,'Copied')).catch(msg=> showToast(msg)); }
+        if(t.classList.contains('queue')){ codes[idx].queued = true; save(codes); render(searchInput.value); }
+        if(t.classList.contains('setActive')){ codes[idx].status='active'; save(codes); render(searchInput.value); }
+        if(t.classList.contains('setExpired')){ codes[idx].status='expired'; save(codes); render(searchInput.value); }
+        if(t.classList.contains('setVerified')){ codes[idx].status='verified'; save(codes); render(searchInput.value); }
+  if(t.classList.contains('del')){ if(confirm('Delete this code?')){ codes.splice(idx,1); save(codes); render(searchInput.value); } }
+        if(t.classList.contains('edit')){ showEditorModal(codes[idx], idx); }
+        if(t.classList.contains('openSource')){ e.preventDefault(); alert('Quelle anklicken ist lokal nicht implementiert.'); }
+      });
+
+      document.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase() === 'n') { e.preventDefault(); copyNextFromQueue(); } if(e.key === '/') { e.preventDefault(); searchInput.focus(); } if(e.key === 'Escape') { if(editorModal.style.display === 'block') hideEditorModal(); } });
+
+      // modal buttons
+      editorSave.addEventListener('click', saveEditorModal);
+      editorCancel.addEventListener('click', hideEditorModal);
+      editorBackdrop.addEventListener('click', (ev)=>{ if(ev.target === editorBackdrop) hideEditorModal(); });
+
+      // regex input
+      regexInput.addEventListener('change', ()=>{ const v = regexInput.value.trim(); try{ new RegExp(v,'g'); saveRegex(v); showToast('Regex gespeichert'); }catch(e){ showToast('Ungültiger Regex: '+e.message); regexInput.value = loadRegex(); } });
+    }
+
+    // --- Editor modal functions ---
+    let editingIndex = null;
+    function showEditorModal(item=null, idx=null){
+      editorError.style.display='none';
+      editingIndex = (typeof idx === 'number') ? idx : null;
+  editorTitle.innerText = idx===null ? 'Create New Code' : 'Edit Code';
+      editorCode.value = item ? item.code : '';
+      editorNote.value = item ? item.note || '' : '';
+      editorSource.value = item ? item.source || '' : '';
+      editorSeen.value = item ? item.seen || new Date().toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
+      editorStatus.value = item ? item.status || 'unknown' : 'unknown';
+      editorQueued.checked = item ? !!item.queued : false;
+      editorModal.style.display = 'block';
+      // make visible block-level
+      editorModal.style.display = 'block';
+      editorBackdrop.querySelector('input,textarea,select')?.focus();
+    }
+    function hideEditorModal(){
+      editorModal.style.display = 'none';
+      editingIndex = null;
+      editorError.style.display='none';
+    }
+    function saveEditorModal(){
+      const codeVal = editorCode.value.trim();
+  if(!codeVal){ editorError.innerText='Code is required.'; editorError.style.display='block'; editorCode.focus(); return; }
+      const entry = {
+        code: codeVal,
+        note: editorNote.value.trim(),
+        source: editorSource.value.trim(),
+        seen: editorSeen.value.trim() || new Date().toISOString().slice(0,10),
+        status: editorStatus.value,
+        queued: !!editorQueued.checked
+      };
+      // merge if exists (keep other fields if editing null)
+      if(editingIndex === null){
+        // dedupe by code
+        const exists = codes.findIndex(c=>c.code === entry.code);
+        if(exists !== -1){ // update existing record
+          codes[exists] = Object.assign({}, codes[exists], entry);
+        }else{
+          codes.unshift(entry);
+        }
+      }else{
+        codes[editingIndex] = Object.assign({}, codes[editingIndex], entry);
+      }
+      save(codes); render(searchInput.value); hideEditorModal();
+    }
+
+    // --- Clipboard helper with graceful fallback ---
+    async function attemptClipboardWrite(text){
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch(e){
+        // fallback: show modal with text for manual copy
+        await showManualCopyPrompt(text);
+  throw('No clipboard permission — please copy manually');
+      }
+    }
+  function showManualCopyPrompt(text){
+      return new Promise((res)=>{
+        const promptDiv = document.createElement('div');
+        promptDiv.style.position='fixed';promptDiv.style.left='50%';promptDiv.style.top='50%';promptDiv.style.transform='translate(-50%,-50%)';promptDiv.style.background='#081426';promptDiv.style.padding='12px';promptDiv.style.border='1px solid rgba(255,255,255,0.06)';promptDiv.style.zIndex=9999;promptDiv.style.borderRadius='8px';
+        const ta = document.createElement('textarea'); ta.value = text; ta.rows=4; ta.style.width='420px'; ta.style.padding='8px';
+  const ok = document.createElement('button'); ok.innerText='Close'; ok.style.marginLeft='8px';
+        promptDiv.appendChild(ta); promptDiv.appendChild(ok); document.body.appendChild(promptDiv);
+        ok.addEventListener('click', ()=>{ document.body.removeChild(promptDiv); res(); });
+      });
+    }
+
+    function showToast(msg){ // non-blocking small message
+      const d = document.createElement('div'); d.innerText = msg; d.style.position='fixed'; d.style.right='18px'; d.style.bottom='18px'; d.style.background='#0b2b3a'; d.style.padding='8px 12px'; d.style.borderRadius='8px'; d.style.boxShadow='0 6px 18px rgba(0,0,0,0.5)'; d.style.zIndex=9999; document.body.appendChild(d); setTimeout(()=> d.remove(), 3200);
+    }
+
+    function flash(el, text){ const old = el.innerText; el.innerText = text; setTimeout(()=> el.innerText = old, 1200); }
+
+    // --- Queue logic ---
+    function getQueue(){ return codes.filter(c=>c.queued && c.status!=='used'); }
+  async function copyNextFromQueue(){ const q = getQueue(); if(q.length===0){ showToast('No codes in the queue.'); return; } const next = q[0]; try{ await attemptClipboardWrite(next.code); showToast('Code copied: '+next.code); if(document.getElementById('autoClear').checked){ setTimeout(()=>{ navigator.clipboard.writeText('').catch(()=>{}); }, 6000); } }catch(e){ showToast('Clipboard unavailable — copy manually.'); }
+    }
+  function markCurrentAsUsed(){ const q = getQueue(); if(q.length===0){ showToast('No codes in the queue.'); return; } codes = codes.map(c=> c.code === q[0].code ? Object.assign({}, c, {status:'used', queued:false}) : c); save(codes); render(searchInput.value); showToast('Marked as used'); }
+
+    // --- Bulk extraction ---
+  function extractFromBulk(){ const text = document.getElementById('bulkText').value || ''; if(!text.trim()){ showToast('Please paste some text.'); return; }
+      const pattern = regexInput.value.trim() || '[A-Z0-9\\-]{5,30}';
+      let regex;
+      try{ regex = new RegExp(pattern,'g'); }catch(e){ showToast('Ungültiger Regex: '+e.message); regexInput.value = loadRegex(); return; }
+      saveRegex(pattern);
+      const matches = Array.from(new Set(text.match(regex)||[]));
+  if(matches.length===0){ showToast('No potential codes found.'); return; }
+      // limit to 2000 to avoid UI freeze
+      const MAX = 2000;
+      const toAdd = matches.slice(0,MAX);
+      const now = new Date().toISOString().slice(0,10);
+      const map = new Map(codes.map(c=>[c.code,c]));
+  toAdd.forEach(f=>{ if(!map.has(f)) map.set(f, {code:f, note:'from Bulk Scan', source:'Bulk', seen:now, status:'unknown', queued:true}); else { const ex = map.get(f); ex.queued = true; } });
+      codes = Array.from(map.values()).sort((a,b)=> (b.seen||'') > (a.seen||'') ? 1 : -1 );
+      save(codes); render(searchInput.value);
+      showToast(`${toAdd.length} potential codes added (marked as queued).` + (matches.length>MAX? ' (Limit reached)':''));
+    }
+
+    // --- Import/Export ---
+    function toggleImport(show){ document.getElementById('importArea').style.display = show ? 'block' : 'none'; }
+  function applyImport(){ const t = document.getElementById('importText').value.trim(); if(!t){ showToast('Please paste JSON.'); return; } try{ const parsed = JSON.parse(t); if(!Array.isArray(parsed)) throw new Error('Expected an array of codes.'); parsed.forEach(p=>{ if(!p.code) throw new Error('Each entry needs a "code" field.'); }); const map = new Map(codes.map(c=>[c.code,c])); parsed.forEach(p=> map.set(p.code, Object.assign(map.get(p.code)||{}, p))); codes = Array.from(map.values()); save(codes); render(searchInput.value); toggleImport(false); showToast('Import successful.'); }catch(e){ showToast('Import error: '+e.message); } }
+
+  function downloadJson(){ const blob = new Blob([JSON.stringify(codes, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='tarkov_promo_codes.json'; a.click(); URL.revokeObjectURL(url); }
+    function downloadCsv(){ const rows = [['code','note','source','seen','status','queued'], ...codes.map(c=>[c.code,c.note||'',c.source||'',c.seen||'',c.status||'',c.queued?1:0])]; const csv = rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""') }"`).join(',')).join('\n'); const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='tarkov_promo_codes.csv'; a.click(); URL.revokeObjectURL(url); }
+
+  function copyActiveToClipboard(){ const active = codes.filter(c=>c.status==='active' || c.status==='verified'); if(active.length===0){ showToast('No active/verified codes marked.'); return; } const txt = active.map(c=>c.code).join('\n'); attemptClipboardWrite(txt).then(()=> showToast('Active codes copied — paste manually into Tarkov.')).catch(()=> showToast('Clipboard unavailable — see popup.')); }
+
+    wire(); render();
+  </script>
+</body>
+</html>
