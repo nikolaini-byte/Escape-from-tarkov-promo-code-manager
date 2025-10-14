@@ -9,9 +9,9 @@ Files
 Screenshot
 ---------
 
-Below is a screenshot of the app (placeholder). Replace `assets/screenshot-placeholder.svg` with a real screenshot for distribution.
+Below is a screenshot of the app. The real screenshot is included in `assets/`.
 
-![App screenshot](assets/screenshot-placeholder.svg)
+![App screenshot](assets/Screenshot 2025-10-14 225345.png)
 
 Quick start
 1. Open `index.html` in your browser (double-click or use `File → Open`).
