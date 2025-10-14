@@ -23,6 +23,7 @@
     button:active{transform:translateY(0)}
     .btn-accent{background:#ff9f2d;color:#071018;border:1px solid rgba(0,0,0,0.25)}
     .status{padding:5px 10px;border-radius:999px;font-size:12px;display:inline-block;font-weight:700}
+  .demo-badge{background:#7b4cff;color:#fff;padding:4px 8px;border-radius:6px;font-weight:800;margin-right:8px;font-size:12px}
     .unknown{background:#2b3340;color:#d1d7de}
     .active{background:#274034;color:#dfffe0}
     .expired{background:#4a2424;color:#ffd6d6}
@@ -271,8 +272,9 @@
           <td>${escapeHtml(c.source||'')}</td>
           <td class="small">${c.seen||''}</td>
           <td><span class="status ${statusClass(c.status)}">${(c.status||'unknown').toUpperCase()}</span></td>
-          <td class="row-actions right">
-            <button data-idx="${idx}" class="copy">Copy</button>
+      <td class="row-actions right">
+        <span class="demo-badge">DEMO</span>
+        <button data-idx="${idx}" class="copy">Copy</button>
             <button data-idx="${idx}" class="queue">Queue</button>
             <button data-idx="${idx}" class="setActive">Active</button>
             <button data-idx="${idx}" class="setExpired ghost">Expired</button>
