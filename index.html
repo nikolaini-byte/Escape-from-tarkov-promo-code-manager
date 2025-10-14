@@ -159,7 +159,8 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { extractCodes, mergeEntries, getQueue } from './src/logic.js';
     // Storage key
     const KEY = 'tarkov_promo_codes_v2';
     const REGEX_KEY = 'tarkov_promo_codes_regex';
@@ -399,33 +400,31 @@
     function flash(el, text){ const old = el.innerText; el.innerText = text; setTimeout(()=> el.innerText = old, 1200); }
 
     // --- Queue logic ---
-    function getQueue(){ return codes.filter(c=>c.queued && c.status!=='used'); }
-  async function copyNextFromQueue(){ const q = getQueue(); if(q.length===0){ showToast('No codes in the queue.'); return; } const next = q[0]; try{ await attemptClipboardWrite(next.code); showToast('Code copied: '+next.code); if(document.getElementById('autoClear').checked){ setTimeout(()=>{ navigator.clipboard.writeText('').catch(()=>{}); }, 6000); } }catch(e){ showToast('Clipboard unavailable — copy manually.'); }
+  async function copyNextFromQueue(){ const q = getQueue(codes); if(q.length===0){ showToast('No codes in the queue.'); return; } const next = q[0]; try{ await attemptClipboardWrite(next.code); showToast('Code copied: '+next.code); if(document.getElementById('autoClear').checked){ setTimeout(()=>{ navigator.clipboard.writeText('').catch(()=>{}); }, 6000); } }catch(e){ showToast('Clipboard unavailable — copy manually.'); }
     }
-  function markCurrentAsUsed(){ const q = getQueue(); if(q.length===0){ showToast('No codes in the queue.'); return; } codes = codes.map(c=> c.code === q[0].code ? Object.assign({}, c, {status:'used', queued:false}) : c); save(codes); render(searchInput.value); showToast('Marked as used'); }
+  function markCurrentAsUsed(){ const q = getQueue(codes); if(q.length===0){ showToast('No codes in the queue.'); return; } codes = codes.map(c=> c.code === q[0].code ? Object.assign({}, c, {status:'used', queued:false}) : c); save(codes); render(searchInput.value); showToast('Marked as used'); }
 
     // --- Bulk extraction ---
   function extractFromBulk(){ const text = document.getElementById('bulkText').value || ''; if(!text.trim()){ showToast('Please paste some text.'); return; }
       const pattern = regexInput.value.trim() || '[A-Z0-9\\-]{5,30}';
-      let regex;
-      try{ regex = new RegExp(pattern,'g'); }catch(e){ showToast('Ungültiger Regex: '+e.message); regexInput.value = loadRegex(); return; }
+      let matches;
+      try{
+        matches = extractCodes(text, pattern);
+      }catch(e){ showToast('Invalid regex: '+e.message); regexInput.value = loadRegex(); return; }
       saveRegex(pattern);
-      const matches = Array.from(new Set(text.match(regex)||[]));
-  if(matches.length===0){ showToast('No potential codes found.'); return; }
-      // limit to 2000 to avoid UI freeze
+      if(matches.length===0){ showToast('No potential codes found.'); return; }
       const MAX = 2000;
       const toAdd = matches.slice(0,MAX);
       const now = new Date().toISOString().slice(0,10);
-      const map = new Map(codes.map(c=>[c.code,c]));
-  toAdd.forEach(f=>{ if(!map.has(f)) map.set(f, {code:f, note:'from Bulk Scan', source:'Bulk', seen:now, status:'unknown', queued:true}); else { const ex = map.get(f); ex.queued = true; } });
-      codes = Array.from(map.values()).sort((a,b)=> (b.seen||'') > (a.seen||'') ? 1 : -1 );
+      const incoming = toAdd.map(f=> ({ code: f, note:'from Bulk Scan', source:'Bulk', seen: now, status:'unknown', queued: true }));
+      codes = mergeEntries(codes, incoming);
       save(codes); render(searchInput.value);
       showToast(`${toAdd.length} potential codes added (marked as queued).` + (matches.length>MAX? ' (Limit reached)':''));
     }
 
     // --- Import/Export ---
     function toggleImport(show){ document.getElementById('importArea').style.display = show ? 'block' : 'none'; }
-  function applyImport(){ const t = document.getElementById('importText').value.trim(); if(!t){ showToast('Please paste JSON.'); return; } try{ const parsed = JSON.parse(t); if(!Array.isArray(parsed)) throw new Error('Expected an array of codes.'); parsed.forEach(p=>{ if(!p.code) throw new Error('Each entry needs a "code" field.'); }); const map = new Map(codes.map(c=>[c.code,c])); parsed.forEach(p=> map.set(p.code, Object.assign(map.get(p.code)||{}, p))); codes = Array.from(map.values()); save(codes); render(searchInput.value); toggleImport(false); showToast('Import successful.'); }catch(e){ showToast('Import error: '+e.message); } }
+  function applyImport(){ const t = document.getElementById('importText').value.trim(); if(!t){ showToast('Please paste JSON.'); return; } try{ const parsed = JSON.parse(t); if(!Array.isArray(parsed)) throw new Error('Expected an array of codes.'); parsed.forEach(p=>{ if(!p.code) throw new Error('Each entry needs a "code" field.'); }); codes = mergeEntries(codes, parsed); save(codes); render(searchInput.value); toggleImport(false); showToast('Import successful.'); }catch(e){ showToast('Import error: '+e.message); } }
 
   function downloadJson(){ const blob = new Blob([JSON.stringify(codes, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='tarkov_promo_codes.json'; a.click(); URL.revokeObjectURL(url); }
     function downloadCsv(){ const rows = [['code','note','source','seen','status','queued'], ...codes.map(c=>[c.code,c.note||'',c.source||'',c.seen||'',c.status||'',c.queued?1:0])]; const csv = rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""') }"`).join(',')).join('\n'); const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='tarkov_promo_codes.csv'; a.click(); URL.revokeObjectURL(url); }
