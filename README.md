@@ -87,3 +87,30 @@ Here's a short demo showing bulk extract → queue → copy next (autoplaying in
 ![Demo GIF](assets/demo.gif)
 
 That's it — the README now shows a screenshot placeholder and step-by-step instructions to create a demo GIF for the project.
+
+Developer
+---------
+If you'd like to run tests or serve the app locally, here are the basic commands.
+
+Requirements:
+- Node.js (for tests) and npm
+- Python (optional) for a simple static server
+
+Install dev deps and run tests:
+
+```powershell
+npm install
+npm test
+```
+
+Serve the app locally (so ES modules load reliably):
+
+```powershell
+# from project root
+python -m http.server 8000
+# then open http://localhost:8000 in a browser
+```
+
+Contributing
+------------
+If you plan to add curated external promo lists, add a file under `external/` and open a PR with the source and attribution. Tests should pass before merging.
