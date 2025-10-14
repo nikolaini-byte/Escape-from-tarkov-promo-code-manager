@@ -57,6 +57,7 @@
 
     <div class="controls">
   <button id="addBtn">Add New Code</button>
+      <button id="demoBtn" class="ghost">Demo</button>
       <button id="exportJson">Export (JSON)</button>
       <button id="exportCsv" class="ghost">Export (CSV)</button>
   <button id="copyActive">Copy All Active</button>
@@ -209,6 +210,7 @@
 
     function wire(){
       document.getElementById('addBtn').addEventListener('click', ()=> showEditorModal(null, null));
+      document.getElementById('demoBtn').addEventListener('click', toggleDemo);
       document.getElementById('exportJson').addEventListener('click', ()=> downloadJson());
       document.getElementById('exportCsv').addEventListener('click', ()=> downloadCsv());
       document.getElementById('copyActive').addEventListener('click', copyActiveToClipboard);
@@ -244,6 +246,79 @@
 
       // regex input
       regexInput.addEventListener('change', ()=>{ const v = regexInput.value.trim(); try{ new RegExp(v,'g'); saveRegex(v); showToast('Regex gespeichert'); }catch(e){ showToast('Ungültiger Regex: '+e.message); regexInput.value = loadRegex(); } });
+    }
+
+    // --- Demo mode (non-destructive) ---
+    let demoActive = false;
+    let demoTimer = null;
+    const demoSteps = [];
+    const demoData = [];
+
+    function createDemoItems(){
+      const now = new Date().toISOString().slice(0,10);
+      demoData.length = 0;
+      for(let i=1;i<=4;i++) demoData.push({ code: `DEMO-CODE-${i}`, note: 'demo', source: 'Demo', seen: now, status: 'unknown', queued: false });
+    }
+
+    function renderDemo(){
+      // Render demoData into the table but visually mark as demo (non-persistent)
+      tbody.innerHTML='';
+      demoData.forEach((c, idx)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${escapeHtml(c.code)}</td>
+          <td>${escapeHtml(c.note||'')}</td>
+          <td>${escapeHtml(c.source||'')}</td>
+          <td class="small">${c.seen||''}</td>
+          <td><span class="status ${statusClass(c.status)}">${(c.status||'unknown').toUpperCase()}</span></td>
+          <td class="row-actions right">
+            <button data-idx="${idx}" class="copy">Copy</button>
+            <button data-idx="${idx}" class="queue">Queue</button>
+            <button data-idx="${idx}" class="setActive">Active</button>
+            <button data-idx="${idx}" class="setExpired ghost">Expired</button>
+            <button data-idx="${idx}" class="setVerified">Verified</button>
+            <button data-idx="${idx}" class="edit ghost">Edit</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleDemo(){
+      if(demoActive) return stopDemo();
+      startDemo();
+    }
+
+    function startDemo(){
+      demoActive = true; createDemoItems(); renderDemo(); showToast('Demo started — no changes will be saved');
+      // Simulate: after 700ms, mark all as queued (extract), then every 1200ms copy next and mark used
+      demoTimer = setTimeout(()=>{
+        demoData.forEach(d=>d.queued=true);
+        renderDemo();
+        let i = 0;
+        demoSteps.length = 0;
+        while(i < demoData.length){
+          demoSteps.push(i);
+          i++;
+        }
+        playDemoStep();
+      }, 700);
+    }
+
+    function playDemoStep(){
+      if(!demoActive) return;
+      if(demoSteps.length===0){ showToast('Demo finished'); demoActive=false; return; }
+      const idx = demoSteps.shift();
+      const item = demoData[idx];
+      // simulate copy
+      attemptClipboardWrite(item.code).then(()=>{
+        showToast('Demo copied: '+item.code);
+      }).catch(()=>{ showToast('Demo clipboard blocked — manual'); });
+      // after short delay, mark as used in demo data
+      setTimeout(()=>{ item.status='used'; item.queued=false; renderDemo(); playDemoStep(); }, 900);
+    }
+
+    function stopDemo(){
+      demoActive = false; clearTimeout(demoTimer); demoSteps.length = 0; createDemoItems(); render(); showToast('Demo stopped');
     }
 
     // --- Editor modal functions ---
